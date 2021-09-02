@@ -10,10 +10,17 @@ afterEach(() => {
   sinon.restore();
 });
 
-export function deployTestContract(name: string): Promise<Contract> {
+export function deployTestContract(
+  name: string,
+  options: {
+    args: any[];
+  }
+) {
   return hardhatEthers
     .getContractFactory(name, getTestWallet())
-    .then((contractFactory: ContractFactory) => contractFactory.deploy());
+    .then((contractFactory: ContractFactory) =>
+      contractFactory.deploy(name, options)
+    );
 }
 
 export function getTestWallet(): Wallet {

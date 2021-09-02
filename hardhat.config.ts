@@ -9,6 +9,7 @@ dotenv.config();
 const { MAINNET_URL, TESTNET_URL, PRIVATE_KEY } = process.env;
 
 import("./tasks/nft");
+
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 let config: HardhatUserConfig;
@@ -16,8 +17,8 @@ let config: HardhatUserConfig;
 const argv = process.argv;
 if (argv[2] !== "test") {
   config = {
-    solidity: "0.7.3",
-    defaultNetwork: "mainnet",
+    solidity: "0.8.0",
+    defaultNetwork: "testnet",
     networks: {
       localhost: {
         url: "http://127.0.0.1:8545",
@@ -39,7 +40,7 @@ if (argv[2] !== "test") {
   };
 } else {
   config = {
-    solidity: "0.7.3",
+    solidity: "0.8.0",
   };
 }
 
