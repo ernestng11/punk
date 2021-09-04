@@ -12,14 +12,14 @@ afterEach(() => {
 
 export function deployTestContract(
   name: string,
-  options: {
-    args: any[];
-  }
+  symbol: string,
+  baseURI: string,
+  maxSupply: number
 ) {
   return hardhatEthers
     .getContractFactory(name, getTestWallet())
     .then((contractFactory: ContractFactory) =>
-      contractFactory.deploy(name, options)
+      contractFactory.deploy(name, symbol, baseURI, maxSupply)
     );
 }
 

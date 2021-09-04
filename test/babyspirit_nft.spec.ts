@@ -4,130 +4,187 @@ import chai, { expect } from "chai";
 import { solidity } from "ethereum-waffle";
 import { TransactionResponse } from "@ethersproject/abstract-provider";
 import sinon from "sinon";
+import crypto from "crypto";
 import { deployTestContract } from "./test-helper";
 import * as provider from "../lib/provider";
 
 chai.use(solidity);
 
-describe("BabySpiritNFT", () => {
-  const NFT_PRICE_INT = 1;
-  const NFT_PRICE = ethers.utils.parseEther("1.0");
-  const TOKEN_URI = "http://example.com/ip_records/42";
+describe("BabySpirit", () => {
+  const contractName: string = "BabySpirit";
+  const contractSymbol: string = "BabySpirit";
+  const contractBaseURI: string = "ipfs.io/ipfs/";
+
   let deployedContract: Contract;
   let wallet: Wallet;
 
   beforeEach(async () => {
     sinon.stub(provider, "getProvider").returns(waffle.provider);
     [wallet] = waffle.provider.getWallets();
-    deployedContract = await deployTestContract("BabySpiritNFT");
+    deployedContract = await deployTestContract(
+      contractName,
+      contractSymbol,
+      contractBaseURI,
+      20
+    );
+    // Minting inactive by default
+    await deployedContract.switchMinting();
   });
 
-  async function mintNftDefault(): Promise<TransactionResponse> {
-    return deployedContract.mintNFT(wallet.address, TOKEN_URI, {
-      value: NFT_PRICE,
+  async function mintBabySpirit(
+    quantity: number,
+    tokenURIArray: string[],
+    value: number
+  ): Promise<TransactionResponse> {
+    return deployedContract.mintBabySpirit(quantity, tokenURIArray, {
+      value: value,
     });
   }
 
-  describe("mintNft", async () => {
-    it("emits the Transfer event", async () => {
-      await expect(mintNftDefault())
-        .to.emit(deployedContract, "Transfer")
-        .withArgs(ethers.constants.AddressZero, wallet.address, "1");
-    });
+  function parseEther(value: number) {
+    const _value = value.toString();
+    return ethers.utils.parseEther(_value);
+  }
 
-    it("returns the new item ID", async () => {
-      await expect(
-        await deployedContract.callStatic.mintNFT(wallet.address, TOKEN_URI, {
-          value: NFT_PRICE,
-        })
-      ).to.eq("1");
-    });
+  function generateRandomHash(length: number): string[] {
+    let result = [];
+    for (let i = 0; i < length; i++) {
+      const hash = crypto.randomBytes(20).toString("hex");
+      result.push(hash);
+    }
+    return result;
+  }
 
-    it("increments the item ID", async () => {
-      const STARTING_NEW_ITEM_ID = "1";
-      const NEXT_NEW_ITEM_ID = "2";
-
-      await expect(mintNftDefault())
-        .to.emit(deployedContract, "Transfer")
-        .withArgs(
-          ethers.constants.AddressZero,
-          wallet.address,
-          STARTING_NEW_ITEM_ID
-        );
-
-      await expect(mintNftDefault())
-        .to.emit(deployedContract, "Transfer")
-        .withArgs(
-          ethers.constants.AddressZero,
-          wallet.address,
-          NEXT_NEW_ITEM_ID
-        );
-    });
-
-    it("cannot mint to address zero", async () => {
-      const TX = deployedContract.mintNFT(
-        ethers.constants.AddressZero,
-        TOKEN_URI,
-        { value: NFT_PRICE }
+  describe("Minting", async () => {
+    it("Single mint", async () => {
+      await expect(await deployedContract.balanceOf(wallet.address)).to.eq("0");
+      await expect(await deployedContract.totalSupply()).to.eq(0);
+      await mintBabySpirit(
+        1,
+        ["QmRpaAA9Ef4oQGeNqYSaPoGnqgphhVnqoRFuaA18SF2Ep3"],
+        parseEther(1)
       );
-      await expect(TX).to.be.revertedWith("ERC721: mint to the zero address");
+      expect(await deployedContract.balanceOf(wallet.address)).to.eq("1");
+      await expect(await deployedContract.totalSupply()).to.eq(1);
+    });
+    it("Multiple mint", async () => {
+      await expect(await deployedContract.balanceOf(wallet.address)).to.eq("0");
+      await expect(await deployedContract.totalSupply()).to.eq(0);
+      await mintBabySpirit(
+        2,
+        [
+          "QmRpaAA9Ef4oQGeNqYSaPoGnqgphhVnqoRFuaA18SF2Ep3",
+          "RHAJrjlhxlrlrljlslallalRLlrRlAHSDKADKQEOQEWIbbb",
+        ],
+        parseEther(2)
+      );
+      expect(await deployedContract.balanceOf(wallet.address)).to.eq("2");
+      await expect(await deployedContract.totalSupply()).to.eq(2);
+    });
+    it("Cannot mint more than 10 BabySpirit in one tx", async () => {
+      await expect(await deployedContract.totalSupply()).to.eq(0);
+      await mintBabySpirit(11, generateRandomHash(11), parseEther(11)).catch(
+        (err) => {
+          expect(
+            err ===
+              "VM Exception while processing transaction: reverted with reason string 'Cannot mint this number of BabySpirits in one go !'"
+          );
+        }
+      );
+    });
+    it("Cannot mint more than total supply", async () => {
+      await expect(await deployedContract.totalSupply()).to.eq(0);
+      await mintBabySpirit(21, generateRandomHash(21), parseEther(21)).catch(
+        (err) => {
+          expect(
+            err ===
+              "Error: VM Exception while processing transaction: reverted with reason string 'Only 1,000 BabySpirits are available'"
+          );
+        }
+      );
+    });
+    it("Reserve BabySpirit for team", async () => {
+      await expect(await deployedContract.balanceOf(wallet.address)).to.eq("0");
+      await expect(await deployedContract.totalSupply()).to.eq(0);
+      await deployedContract.reserveBabySpirits(10, generateRandomHash(10));
+      expect(await deployedContract.balanceOf(wallet.address)).to.eq("10");
+      await expect(await deployedContract.totalSupply()).to.eq(10);
     });
   });
 
-  describe("balanceOf", () => {
-    it("gets the count of NFTs for this address", async () => {
-      await expect(await deployedContract.balanceOf(wallet.address)).to.eq("0");
-
-      await mintNftDefault();
-
-      expect(await deployedContract.balanceOf(wallet.address)).to.eq("1");
+  describe("tokenURI", () => {
+    it("Set new baseURI", async () => {
+      await mintBabySpirit(
+        1,
+        ["QmRpaAA9Ef4oQGeNqYSaPoGnqgphhVnqoRFuaA18SF2Ep3"],
+        parseEther(1)
+      );
+      await expect(await deployedContract.callStatic.tokenURI(0)).to.eq(
+        "ipfs.io/ipfs/QmRpaAA9Ef4oQGeNqYSaPoGnqgphhVnqoRFuaA18SF2Ep3"
+      );
     });
   });
 
   describe("fees", () => {
-    it("check that nft fee is deducted from minter", async () => {
-      const initialWalletBal = await waffle.provider.getBalance(wallet.address);
-      const formattedInitialWalletBal = ethers.utils.formatEther(
-        initialWalletBal.toString()
-      );
-
-      await mintNftDefault();
-
-      const finalWalletBal = await waffle.provider.getBalance(wallet.address);
-      const formattedFinalWalletBal = ethers.utils.formatEther(
-        finalWalletBal.toString()
-      );
-
-      expect(
-        Math.round(formattedInitialWalletBal - formattedFinalWalletBal)
-      ).to.equal(NFT_PRICE_INT);
-    });
-    it("check that contract earns nft fees", async () => {
+    it("Check that contract earns fees", async () => {
       const initialContractBal = await waffle.provider.getBalance(
         deployedContract.address
       );
       const formattedInitialContractBal = ethers.utils.formatEther(
         initialContractBal.toString()
       );
+      await mintBabySpirit(
+        1,
+        ["QmRpaAA9Ef4oQGeNqYSaPoGnqgphhVnqoRFuaA18SF2Ep3"],
+        parseEther(1)
+      );
+      const finalContractBal = await waffle.provider.getBalance(
+        deployedContract.address
+      );
+      const formattedFinalContractBal = ethers.utils.formatEther(
+        finalContractBal.toString()
+      );
+      expect(formattedFinalContractBal - formattedInitialContractBal).to.equal(
+        1
+      );
+    });
+    it("Withdraw fees from contract", async () => {
+      const initalOwnerBal = await waffle.provider.getBalance(wallet.address);
+      const formattedInitalOwnerBal = ethers.utils.formatEther(
+        initalOwnerBal.toString()
+      );
 
-      let formattedOldContractBal: number = formattedInitialContractBal;
-      let newContractBal: any;
-      let formattedNewContractBal: number;
+      await mintBabySpirit(
+        1,
+        ["QmRpaAA9Ef4oQGeNqYSaPoGnqgphhVnqoRFuaA18SF2Ep3"],
+        parseEther(1)
+      );
 
-      // Test Multiple Txs
-      for (let i = 0; i < 3; i++) {
-        await mintNftDefault();
-        newContractBal = await wallet.provider.getBalance(
-          deployedContract.address
-        );
-        formattedNewContractBal = ethers.utils.formatEther(
-          newContractBal.toString()
-        );
-        expect(
-          Math.round(formattedNewContractBal - formattedOldContractBal)
-        ).to.equal(NFT_PRICE_INT);
-        formattedOldContractBal = formattedNewContractBal;
-      }
+      // Check that contract received fees
+      const contractBal = await waffle.provider.getBalance(
+        deployedContract.address
+      );
+      const formattedContractBal = ethers.utils.formatEther(
+        contractBal.toString()
+      );
+      expect(formattedContractBal).to.equal("1.0");
+
+      await deployedContract.withdrawBalance();
+
+      const finalOwnerBal = await waffle.provider.getBalance(wallet.address);
+      const formattedFinalOwnerBal = ethers.utils.formatEther(
+        finalOwnerBal.toString()
+      );
+
+      const finalContractBal = await waffle.provider.getBalance(
+        deployedContract.address
+      );
+      const formattedFinalContractBal = ethers.utils.formatEther(
+        finalContractBal.toString()
+      );
+
+      expect(formattedFinalOwnerBal > formattedInitalOwnerBal);
+      expect(formattedFinalContractBal).to.equal("0.0");
     });
   });
 });
