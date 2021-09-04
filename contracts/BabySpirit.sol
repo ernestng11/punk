@@ -25,10 +25,10 @@ contract BabySpirit is ERC721Enumerable, Ownable {
         string memory name,
         string memory symbol,
         string memory baseURI,
-        uint256 _maxBabySpirit
+        uint256 maxSupply 
     ) ERC721(name, symbol) {
         m_BaseURI = baseURI;
-        setMaxSupply(_maxBabySpirit);
+        setMaxSupply(maxSupply);
     }
 
     function mintBabySpirit(uint quantity, string[] memory _tokenURIArray) public payable {
@@ -104,11 +104,21 @@ contract BabySpirit is ERC721Enumerable, Ownable {
         return string(abi.encodePacked(base, tokenId.toString()));
     }
         
+    function tokensOfOwner(address _owner) external view returns(uint256[] memory) {
+        uint256 tokenCount = balanceOf(_owner);
+        if (tokenCount == 0) {
+            return new uint256[](0);
+        } else {
+            uint256[] memory result = new uint256[](tokenCount);
+            for (uint256 index; index < tokenCount; index++) {
+                result[index] = tokenOfOwnerByIndex(_owner, index);
+            }
+            return result;
+        }
+    }
+
     function withdrawBalance() public onlyOwner {
         uint256 balance = address(this).balance;
         payable(msg.sender).transfer(balance);
     }
-
-    /* Todo: Function to return all tokenID's of minter */
-
 }

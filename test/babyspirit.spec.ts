@@ -112,8 +112,8 @@ describe("BabySpirit", () => {
     });
   });
 
-  describe("tokenURI", () => {
-    it("Set new baseURI", async () => {
+  describe("token", () => {
+    it("Returns ipfs url", async () => {
       await mintBabySpirit(
         1,
         ["QmRpaAA9Ef4oQGeNqYSaPoGnqgphhVnqoRFuaA18SF2Ep3"],
@@ -122,6 +122,22 @@ describe("BabySpirit", () => {
       await expect(await deployedContract.callStatic.tokenURI(0)).to.eq(
         "ipfs.io/ipfs/QmRpaAA9Ef4oQGeNqYSaPoGnqgphhVnqoRFuaA18SF2Ep3"
       );
+    });
+    it("Returns all tokenIds belonging to address", async () => {
+      await mintBabySpirit(
+        2,
+        [
+          "QmRpaAA9Ef4oQGeNqYSaPoGnqgphhVnqoRFuaA18SF2Ep3",
+          "RHAJrjlhxlrlrljlslallalRLlrRlAHSDKADKQEOQEWIbbb",
+        ],
+        parseEther(2)
+      );
+      const tokenIds = await deployedContract.callStatic.tokensOfOwner(
+        wallet.address
+      );
+      const _tokenIds = tokenIds.map((res: any) => parseInt(res._hex, 16));
+      expect(_tokenIds[0]).to.equal(0);
+      expect(_tokenIds[1]).to.equal(1);
     });
   });
 

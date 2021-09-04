@@ -395,8 +395,8 @@
       ]
     },
     "/Users/davin/Desktop/DEV/solidity/nft/contracts/BabySpirit.sol": {
-      "lastModificationDate": 1630772366004,
-      "contentHash": "37bb94ca74493b84ca71b8a51ef1ee88",
+      "lastModificationDate": 1630778691462,
+      "contentHash": "5b3bc6387ddf58458bff7c9a2ff334da",
       "sourceName": "contracts/BabySpirit.sol",
       "solcConfig": {
         "version": "0.8.0",
